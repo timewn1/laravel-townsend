@@ -46,6 +46,7 @@ class GetProductsController extends Controller
 
         $section_field = 'description';
         $section_compare = 'LIKE';
+
         if (is_numeric($section)) {
             $section_field = 'id';
             $section_compare = '=';
@@ -76,7 +77,7 @@ class GetProductsController extends Controller
                 break;
 
             default:
-                if ((isset($section) && ($section == "%" || $section == "all"))) {
+                if ((isset($section) && ($section == "%" || strtoupper($section) == "ALL"))) {
                     $order = "ORDER BY sp.position ASC, release_date DESC";
                 } else {
                     $order = "ORDER BY store_products_section.position ASC, release_date DESC";
@@ -88,33 +89,9 @@ class GetProductsController extends Controller
         $products = array();
         $x = 0;
 
-        //Beginning of selection query used in 3 places below
-        $query_start = "SELECT sp.id, artist_id, type, display_name, name, launch_date, remove_date, sp.description,
-                                    available, price, euro_price, dollar_price, image_format, disabled_countries,release_date
-                                FROM store_products sp ";
-
         if (isset($number) && isset($page) && $page != null) {
-            $page = ($page-1)*$number;
+            $page = ($page - 1) * $number;
             $pages = " LIMIT $page,$number";
-
-            $query = $query_start;
-
-            if ($section != '%' && strtoupper($section) != 'ALL') {
-
-                $query .= "INNER JOIN store_products_section ON store_products_section.store_product_id = sp.id
-                            INNER JOIN sections ON store_products_section.section_id = sections.id
-                            WHERE sections.$section_field $section_compare '$section' AND ";
-
-            } else {
-                $query .= "LEFT JOIN sections ON sections.id = -1 WHERE ";
-            }
-            $query.= " sp.store_id= '$store_id' AND deleted = '0' AND available = 1 ";
-
-            $result = DB::select($query);
-            $num_products = count($result);
-
-            $no_pages = ceil($num_products/$number);
-            $products['pages'] = $no_pages;
         } else {
             if (isset($number)) {
                 $pages = " LIMIT $number";
@@ -123,25 +100,33 @@ class GetProductsController extends Controller
             }
         }
 
-        $query = $query_start;
+        //Beginning of selection query used in 3 places below
+        $query = "SELECT sp.id, artist_id, type, display_name, name, launch_date, remove_date, sp.description,
+                    available, price, euro_price, dollar_price, image_format, disabled_countries, release_date
+                    FROM store_products sp ";
 
         if ($section != '%') {
             $query .= "INNER JOIN store_products_section ON store_products_section.store_product_id = sp.id
                         INNER JOIN sections ON store_products_section.section_id = sections.id
                         WHERE sections.$section_field $section_compare '$section' AND ";
-            $orderby = " ORDER BY store_products_section.position ASC, sp.position ASC, release_date DESC$pages";
         } else {
             $query .= "LEFT JOIN sections ON sections.id = -1 WHERE ";
-            $orderby = " ORDER BY position ASC, release_date DESC$pages";
         }
 
         $query .= " sp.store_id = '$store_id' AND deleted = '0' AND available = 1  ";
-        $query .= $orderby;
+        
+        $result = DB::select($query);
+        $num_products = count($result);
 
-        $result = array_map('array_values', json_decode(json_encode(DB::select($query)), true));
+        $no_pages = ceil($num_products / $number);
+        $products['pages'] = $no_pages;
 
+        $query .= $order;
+        $query .= $pages;
 
-        while (list($main_id, $artist_id, $type, $display_name, $name, $launch_date, $remove_date, $description, $available, $price, $euro_price, $dollar_price, $image_format, $disabled_countries, $release_date) = array_pop($result)) {
+        $array_result = array_map('array_values', json_decode(json_encode(DB::select($query)), true));
+
+        while (list($main_id, $artist_id, $type, $display_name, $name, $launch_date, $remove_date, $description, $available, $price, $euro_price, $dollar_price, $image_format, $disabled_countries, $release_date) = array_pop($array_result)) {
 
             if ($launch_date != null && !isset($_SESSION['preview_mode'])) {
                 $launch = strtotime($launch_date);
@@ -204,7 +189,6 @@ class GetProductsController extends Controller
             return false;
         }
     }
-
 
     public function getGeocode()
     {
