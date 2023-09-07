@@ -130,7 +130,7 @@ class GetProductsController extends Controller
 
         $array_result = array_map('array_values', json_decode(json_encode(DB::select($query)), true));
 
-        while (list($main_id, $artist_id, $type, $display_name, $name, $launch_date, $remove_date, $description, $available, $price, $euro_price, $dollar_price, $image_format, $disabled_countries, $release_date) = array_pop($array_result)) {
+        while (list($main_id, $artist_id, $type, $display_name, $name, $launch_date, $remove_date, $description, $available, $price, $euro_price, $dollar_price, $image_format, $disabled_countries, $release_date) = array_shift($array_result)) {
 
             if ($launch_date != null && !isset($_SESSION['preview_mode'])) {
                 $launch = strtotime($launch_date);
