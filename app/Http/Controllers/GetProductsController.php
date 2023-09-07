@@ -108,7 +108,11 @@ class GetProductsController extends Controller
         if ($section != '%') {
             $query .= "INNER JOIN store_products_section ON store_products_section.store_product_id = sp.id
                         INNER JOIN sections ON store_products_section.section_id = sections.id
-                        WHERE sections.$section_field $section_compare '$section' AND ";
+                        WHERE ";
+
+            if(strtoupper($section) != 'ALL') {
+                $query .= "sections.$section_field $section_compare '$section' AND ";
+            }
         } else {
             $query .= "LEFT JOIN sections ON sections.id = -1 WHERE ";
         }
